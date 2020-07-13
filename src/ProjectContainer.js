@@ -38,9 +38,36 @@ function reducer(state, action) {
     case 'FETCH_BLOCKERS_SUCCESS': {
       const storiesWithBlockersAndTasks = { ...state.stories };
 
+      const matchStoryId = str =>
+        (str && str.match(/([0-9]){9}$/) && str.match(/([0-9]){9}$/)[0]) || 'Unknown';
+
+      const getStoryBlockers = blockers => {
+        return blockers
+          .map(b => {
+            const storyId = matchStoryId(b.description);
+            const scopedStory = storiesWithBlockersAndTasks[storyId];
+            return scopedStory
+              ? {
+                  id: scopedStory.id,
+                  url: scopedStory.url,
+                  name: scopedStory.name,
+                  resolved: b.resolved
+                }
+              : {
+                  id: storyId,
+                  url: `https://www.pivotaltracker.com/story/show/${storyId}`,
+                  name: '[Out of current iteration blocker]',
+                  resolved: b.resolved
+                };
+          })
+          .filter(b => !b.resolved);
+      };
+
       payload.forEach(story => {
         if (storiesWithBlockersAndTasks[story.id]) {
-          storiesWithBlockersAndTasks[story.id].blockers = story.blockers;
+          storiesWithBlockersAndTasks[story.id].blockers = getStoryBlockers(
+            story.blockers
+          );
           storiesWithBlockersAndTasks[story.id].tasks = story.tasks;
         } else {
           console.warn(
